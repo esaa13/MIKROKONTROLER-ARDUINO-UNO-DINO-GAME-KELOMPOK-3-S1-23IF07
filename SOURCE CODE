@@ -1,0 +1,106 @@
+SOURCE CODE : 
+
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int pos = 0;
+int y = 1;
+const int buttonPin = 2;
+const int buzzerPin = 4;
+bool gameOver = false;
+int score = 0; // Variabel untuk menyimpan angka skor
+
+byte dino[8] = {
+  0b00011,
+  0b00011,
+  0b00010,
+  0b00010,
+  0b01110,
+  0b01110,
+  0b01110,
+  0b01010,
+};
+
+byte kaktus[8] = {
+  0b00100,
+  0b01110,
+  0b11110,
+  0b01111,
+  0b01110,
+  0b11110,
+  0b01111,
+  0b01110,
+};
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.createChar(0, dino);
+  lcd.createChar(1, kaktus);
+  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT);
+}
+
+void loop() {
+  if (gameOver) {
+    return; // Menghentikan loop jika game over
+  }
+
+  // Bersihkan layar dan tampilkan kaktus
+  lcd.clear();
+  for(int i = 0; i < 4; i++) {
+    lcd.setCursor(3 + (i * 3), 1);
+    lcd.write((byte)1);
+  }
+
+  // Cek apakah tombol ditekan untuk membuat dino melompat
+  if (digitalRead(buttonPin) == LOW) {
+    y = 0;  // Dino melompat
+    tone(buzzerPin, 2000); // Aktifkan buzzer dengan frekuensi 1500 Hz
+  } else {
+    y = 1;  // Dino kembali ke bawah
+    noTone(buzzerPin);     // Matikan suara buzzer
+  }
+
+  // Cek apakah dino menabrak kaktus
+  if (y == 1 && (pos == 3 || pos == 6 || pos == 9 || pos == 12)) {
+    // Jika dino berada di posisi kaktus, Game Over
+    tone(buzzerPin, 500, 300); // Nada rendah untuk Game Over
+    delay(300);
+    tone(buzzerPin, 400, 300);
+    delay(300);
+    tone(buzzerPin, 300, 500);
+    lcd.clear();
+    lcd.setCursor(4, 0);
+    lcd.print("Game Over");
+    lcd.setCursor(2, 1);
+    lcd.print("Try Again!");
+    gameOver = true; // Set game over flag
+    score = 0; // Reset skor saat Game Over
+    return;
+  }
+
+  // Tampilkan dino di posisi tertentu
+  lcd.setCursor(pos, y);
+  lcd.write((byte)0);
+
+  // Gerakkan dino ke kanan
+  pos++;
+  if (pos > 15) {
+    pos = 0;
+    // Dino mencapai ujung kanan, beri suara "point" dan tambahkan skor
+    tone(buzzerPin, 2000, 100); // Nada tinggi untuk "point"
+    delay(100);
+    noTone(buzzerPin);
+    score++; // Tambahkan skor
+  }
+
+  // Menampilkan angka skor di pojok kanan atas layar
+  lcd.setCursor(14, 0);
+  lcd.print(score);
+
+  // Delay untuk mengontrol kecepatan animasi
+  delay(250);
+}
